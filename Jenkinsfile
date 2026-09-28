@@ -1,17 +1,14 @@
 pipeline {
     agent any
-
     environment {
         APP_NAME = 'employee-backend'
         NAMESPACE = 'employee-system'
         IMAGE = 'employee-backend:2.0.0'
     }
-
     stages {
         stage('Checkout') {
             steps { checkout scm }
         }
-
         stage('Clean Existing Backend') {
             steps {
                 bat '''
@@ -22,75 +19,61 @@ pipeline {
                 '''
             }
         }
-
         stage('Clean Docker Image') {
-            steps {
-                bat 'docker rmi -f %IMAGE% 2>nul || exit /b 0'
-            }
+            steps { bat 'docker rmi -f %IMAGE% 2>nul || exit /b 0' }
         }
-
         stage('Install Dependencies') {
-            steps {
-                bat 'python -m pip install -r backend/requirements.txt'
-            }
+            steps { bat 'python -m pip install -r backend/requirements.txt' }
         }
-
         stage('Run Tests') {
             steps {
                 bat '''
                     cd backend
-                    python -m pytest -v
+                    python -m pytest tests -v
                 '''
             }
         }
-
         stage('Dependency Validation') {
-            steps {
-                bat 'python -m pip check'
-            }
+            steps { bat 'python -m pip check' }
         }
-
         stage('Build Docker Image') {
             steps {
                 bat '''
                     docker build --no-cache -t %IMAGE% backend
-                    docker images employee-backend
+                    docker image inspect %IMAGE% >nul
+                    if errorlevel 1 exit /b 1
                 '''
             }
         }
-
         stage('Verify Docker Image') {
             steps {
                 bat '''
                     docker run --rm %IMAGE% python --version
-                    docker run --rm %IMAGE% python -c "from app.main import app; print([getattr(r,'path','') for r in app.routes])"
-                    docker run --rm %IMAGE% python -c "from app.main import app; print(any(getattr(r,'path','') == '/metrics' for r in app.routes))"
-                    docker run --rm %IMAGE% python -c "import prometheus_client; import prometheus_fastapi_instrumentator; print('PROMETHEUS OK')"
+                    docker run --rm %IMAGE% python -c "from app.main import app; print([r.path for r in app.routes])"
+                    docker run --rm %IMAGE% python -c "from app.main import app; assert any(r.path == '/metrics' for r in app.routes); print('METRICS ROUTE OK')"
+                    docker run --rm %IMAGE% python -c "import prometheus_client, prometheus_fastapi_instrumentator; print('PROMETHEUS PACKAGES OK')"
                 '''
             }
         }
-
         stage('Prepare Kubernetes') {
             steps {
                 bat '''
                     kubectl apply -f kubernetes/namespace.yaml
-                    kubectl apply -f kubernetes/configmap.yaml
+                    if exist kubernetes/configmap.yaml kubectl apply -f kubernetes/configmap.yaml
                 '''
             }
         }
-
         stage('Load Image Into Kubernetes') {
             steps {
                 bat '''
                     for /f "delims=" %%C in ('kubectl config current-context') do (
-                        echo KUBERNETES CONTEXT: %%C
+                        echo Kubernetes context: %%C
                         if /I "%%C"=="minikube" minikube image load %IMAGE%
                         if /I "%%C"=="kind-kind" kind load docker-image %IMAGE%
                     )
                 '''
             }
         }
-
         stage('Deploy Backend') {
             steps {
                 bat '''
@@ -100,34 +83,30 @@ pipeline {
                 '''
             }
         }
-
         stage('Verify Backend') {
             steps {
                 bat '''
                     kubectl get deployment %APP_NAME% -n %NAMESPACE%
                     kubectl get pods -n %NAMESPACE% -o wide
                     kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python --version
-                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "from app.main import app; print([getattr(r,'path','') for r in app.routes])"
+                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "from app.main import app; assert any(r.path == '/metrics' for r in app.routes); print('ROUTE CHECK OK')"
                 '''
             }
         }
-
         stage('Health Check') {
             steps {
                 bat '''
-                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health'); print(r.status); print(r.read().decode())"
+                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health'); assert r.status == 200; print(r.read().decode())"
                 '''
             }
         }
-
         stage('Metrics Check') {
             steps {
                 bat '''
-                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/metrics'); print(r.status); print(r.read().decode()[:1000])"
+                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/metrics'); assert r.status == 200; print(r.read().decode()[:1000])"
                 '''
             }
         }
-
         stage('Deploy Prometheus') {
             steps {
                 bat '''
@@ -137,7 +116,6 @@ pipeline {
                 '''
             }
         }
-
         stage('Deploy Grafana') {
             steps {
                 bat '''
@@ -146,7 +124,6 @@ pipeline {
                 '''
             }
         }
-
         stage('Monitoring Validation') {
             steps {
                 bat '''
@@ -157,7 +134,6 @@ pipeline {
                 '''
             }
         }
-
         stage('Start Services') {
             steps {
                 bat '''
@@ -169,7 +145,6 @@ pipeline {
             }
         }
     }
-
     post {
         success { echo 'BUILD SUCCESS' }
         failure { echo 'BUILD FAILED' }
