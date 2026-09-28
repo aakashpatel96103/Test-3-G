@@ -1,8 +1,8 @@
 fastapi
 uvicorn[standard]
-sqlalchemy
-python-jose
-email-validator
+pydantic
+python-multipart
+prometheus-client
+prometheus-fastapi-instrumentator
 pytest
 httpx
-prometheus-fastapi-instrumentator

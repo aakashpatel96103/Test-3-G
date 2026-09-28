@@ -1,30 +1,34 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator
-from .database import Base, engine
-from .routes.auth import router as auth_router
-from .routes.employees import router as employee_router
 
-Base.metadata.create_all(bind=engine)
+app = FastAPI(title="Employee Management System", version="2.0.0")
 
-app = FastAPI(
-    title="Employee Management System",
-    description="Backend-only Employee Management API with authentication, CRUD and Prometheus monitoring.",
-    version="1.0.0"
-)
-
-app.include_router(auth_router)
-app.include_router(employee_router)
 Instrumentator().instrument(app).expose(app)
 
 @app.get("/")
 def root():
-    return {"service": "employee-backend", "version": "1.0.0", "docs": "/docs", "metrics": "/metrics"}
+    return {"message": "Employee Management API is running"}
 
-@app.get("/health", tags=["System"])
+@app.get("/health")
 def health():
-    return {"status": "healthy", "service": "employee-backend", "version": "1.0.0"}
+    return {"status": "healthy"}
 
-@app.get("/doc", include_in_schema=False)
-def swagger_alias():
-    return RedirectResponse("/docs")
+@app.get("/employees")
+def get_employees():
+    return []
+
+@app.post("/employees")
+def create_employee(employee: dict):
+    return {"message": "Employee created", "employee": employee}
+
+@app.get("/employees/{employee_id}")
+def get_employee(employee_id: int):
+    return {"id": employee_id}
+
+@app.put("/employees/{employee_id}")
+def update_employee(employee_id: int, employee: dict):
+    return {"message": "Employee updated", "id": employee_id, "employee": employee}
+
+@app.delete("/employees/{employee_id}")
+def delete_employee(employee_id: int):
+    return {"message": "Employee deleted", "id": employee_id}

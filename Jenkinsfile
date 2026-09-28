@@ -2,10 +2,9 @@ pipeline {
     agent any
 
     environment {
-        VERSION = '1.0.0'
-        BACKEND_IMAGE = "employee-backend:${VERSION}"
-        SWAGGER_PORT = '8001'
-        GRAFANA_PORT = '8002'
+        APP_NAME = 'employee-backend'
+        NAMESPACE = 'employee-system'
+        IMAGE = 'employee-backend:2.0.0'
     }
 
     stages {
@@ -13,107 +12,166 @@ pipeline {
             steps { checkout scm }
         }
 
-        stage('Backend Tests') {
+        stage('Clean Existing Backend') {
+            steps {
+                bat '''
+                    kubectl delete deployment %APP_NAME% -n %NAMESPACE% --ignore-not-found=true --wait=true
+                    kubectl delete service %APP_NAME% -n %NAMESPACE% --ignore-not-found=true
+                    kubectl delete pod -l app=%APP_NAME% -n %NAMESPACE% --ignore-not-found=true --wait=true
+                    powershell -NoProfile -Command "Start-Sleep -Seconds 3"
+                '''
+            }
+        }
+
+        stage('Clean Docker Image') {
+            steps {
+                bat 'docker rmi -f %IMAGE% 2>nul || exit /b 0'
+            }
+        }
+
+        stage('Install Dependencies') {
             steps {
                 bat 'python -m pip install -r backend/requirements.txt'
-                bat 'cd backend && python -m pytest -v'
             }
         }
 
-        stage('Security Validation') {
-            steps { bat 'python -m pip check' }
-        }
-
-        stage('Docker Build') {
-            steps { bat 'docker build -t %BACKEND_IMAGE% backend' }
-        }
-
-        stage('Artifact Version') {
+        stage('Run Tests') {
             steps {
-                bat 'echo Build version: %VERSION%'
-                bat 'type VERSION'
+                bat '''
+                    cd backend
+                    python -m pytest -v
+                '''
             }
         }
 
-        stage('Kubernetes Backend Deploy') {
+        stage('Dependency Validation') {
             steps {
-                bat 'kubectl apply -f kubernetes/namespace.yaml'
-                bat 'kubectl apply -f kubernetes/configmap.yaml'
-                bat 'kubectl apply -f kubernetes/backend-deployment.yaml'
-                bat 'kubectl apply -f kubernetes/backend-service.yaml'
-                bat 'kubectl rollout status deployment/employee-backend -n employee-system --timeout=180s'
+                bat 'python -m pip check'
             }
         }
 
-        stage('Backend Health and Metrics') {
+        stage('Build Docker Image') {
             steps {
-                bat 'kubectl get pods -n employee-system'
-                bat 'kubectl get services -n employee-system'
-                bat '''kubectl exec deployment/employee-backend -n employee-system -- python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health').read().decode())"'''
-                bat '''kubectl exec deployment/employee-backend -n employee-system -- python -c "import urllib.request; print('METRICS OK'); print(urllib.request.urlopen('http://127.0.0.1:8000/metrics').read().decode()[:200])"'''
+                bat '''
+                    docker build --no-cache -t %IMAGE% backend
+                    docker images employee-backend
+                '''
+            }
+        }
+
+        stage('Verify Docker Image') {
+            steps {
+                bat '''
+                    docker run --rm %IMAGE% python --version
+                    docker run --rm %IMAGE% python -c "from app.main import app; print([getattr(r,'path','') for r in app.routes])"
+                    docker run --rm %IMAGE% python -c "from app.main import app; print(any(getattr(r,'path','') == '/metrics' for r in app.routes))"
+                    docker run --rm %IMAGE% python -c "import prometheus_client; import prometheus_fastapi_instrumentator; print('PROMETHEUS OK')"
+                '''
+            }
+        }
+
+        stage('Prepare Kubernetes') {
+            steps {
+                bat '''
+                    kubectl apply -f kubernetes/namespace.yaml
+                    kubectl apply -f kubernetes/configmap.yaml
+                '''
+            }
+        }
+
+        stage('Load Image Into Kubernetes') {
+            steps {
+                bat '''
+                    for /f "delims=" %%C in ('kubectl config current-context') do (
+                        echo KUBERNETES CONTEXT: %%C
+                        if /I "%%C"=="minikube" minikube image load %IMAGE%
+                        if /I "%%C"=="kind-kind" kind load docker-image %IMAGE%
+                    )
+                '''
+            }
+        }
+
+        stage('Deploy Backend') {
+            steps {
+                bat '''
+                    kubectl apply -f kubernetes/backend-deployment.yaml
+                    kubectl apply -f kubernetes/backend-service.yaml
+                    kubectl rollout status deployment/%APP_NAME% -n %NAMESPACE% --timeout=180s
+                '''
+            }
+        }
+
+        stage('Verify Backend') {
+            steps {
+                bat '''
+                    kubectl get deployment %APP_NAME% -n %NAMESPACE%
+                    kubectl get pods -n %NAMESPACE% -o wide
+                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python --version
+                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "from app.main import app; print([getattr(r,'path','') for r in app.routes])"
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                bat '''
+                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health'); print(r.status); print(r.read().decode())"
+                '''
+            }
+        }
+
+        stage('Metrics Check') {
+            steps {
+                bat '''
+                    kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python -c "import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/metrics'); print(r.status); print(r.read().decode()[:1000])"
+                '''
             }
         }
 
         stage('Deploy Prometheus') {
             steps {
-                bat 'kubectl apply -f kubernetes/monitoring/namespace.yaml'
-                bat 'kubectl apply -f kubernetes/monitoring/prometheus.yaml'
-                bat 'kubectl rollout status deployment/prometheus -n monitoring --timeout=180s'
+                bat '''
+                    kubectl apply -f kubernetes/monitoring/namespace.yaml
+                    kubectl apply -f kubernetes/monitoring/prometheus.yaml
+                    kubectl rollout status deployment/prometheus -n monitoring --timeout=180s
+                '''
             }
         }
 
         stage('Deploy Grafana') {
             steps {
-                bat 'kubectl apply -f kubernetes/monitoring/grafana.yaml'
-                bat 'kubectl rollout status deployment/grafana -n monitoring --timeout=180s'
+                bat '''
+                    kubectl apply -f kubernetes/monitoring/grafana.yaml
+                    kubectl rollout status deployment/grafana -n monitoring --timeout=180s
+                '''
             }
         }
 
         stage('Monitoring Validation') {
             steps {
-                bat 'kubectl get pods -n monitoring'
-                bat 'kubectl get services -n monitoring'
-                bat '''kubectl exec deployment/prometheus -n monitoring -- wget -qO- http://127.0.0.1:9090/-/ready'''
-                bat '''kubectl exec deployment/grafana -n monitoring -- wget -qO- http://127.0.0.1:3000/api/health'''
+                bat '''
+                    kubectl get pods -n monitoring
+                    kubectl get services -n monitoring
+                    kubectl exec deployment/prometheus -n monitoring -- wget -qO- http://127.0.0.1:9090/-/ready
+                    kubectl exec deployment/grafana -n monitoring -- wget -qO- http://127.0.0.1:3000/api/health
+                '''
             }
         }
 
-        stage('Start Swagger and Grafana') {
+        stage('Start Services') {
             steps {
                 bat '''
-                    echo Starting Swagger...
                     set JENKINS_NODE_COOKIE=dontKillMe
-                    start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/employee-backend %SWAGGER_PORT%:8000 -n employee-system > swagger-port-forward.log 2>&1"
-
-                    echo Starting Grafana...
-                    start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/grafana %GRAFANA_PORT%:3000 -n monitoring > grafana-port-forward.log 2>&1"
-
+                    start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/employee-backend 8001:8000 -n employee-system > swagger-port-forward.log 2>&1"
+                    start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/grafana 8002:3000 -n monitoring > grafana-port-forward.log 2>&1"
                     powershell -NoProfile -Command "Start-Sleep -Seconds 5"
-
-                    echo ==========================================
-                    echo EMPLOYEE MANAGEMENT SYSTEM
-                    echo ==========================================
-                    echo Swagger : http://localhost:8001/docs
-                    echo Health  : http://localhost:8001/health
-                    echo Metrics : http://localhost:8001/metrics
-                    echo Grafana : http://localhost:8002
-                    echo Login   : admin / admin
-                    echo ==========================================
-                    exit /b 0
                 '''
             }
         }
     }
 
     post {
-        always {
-            echo 'Employee Management CI/CD + Monitoring pipeline completed.'
-        }
-        success {
-            echo 'BUILD SUCCESS - Swagger: http://localhost:8001/docs | Grafana: http://localhost:8002'
-        }
-        failure {
-            echo 'BUILD FAILED - Check the failed stage above.'
-        }
+        success { echo 'BUILD SUCCESS' }
+        failure { echo 'BUILD FAILED' }
     }
 }
