@@ -105,9 +105,9 @@ pipeline {
                     echo Kubernetes context: %K8S_CONTEXT%
                     if /I "%K8S_CONTEXT%"=="minikube" minikube image load %IMAGE%
                     if /I "%K8S_CONTEXT%"=="kind-kind" kind load docker-image %IMAGE%
-                    docker inspect desktop-control-plane >nul 2>&1
-                    if not errorlevel 1 (
-                        if not /I "%K8S_CONTEXT%"=="minikube" (
+                    if /I "%K8S_CONTEXT%"=="docker-desktop" (
+                        docker inspect desktop-control-plane >nul 2>&1
+                        if not errorlevel 1 (
                             echo Loading %IMAGE% into desktop-control-plane...
                             docker save -o k8s_image.tar %IMAGE%
                             docker cp k8s_image.tar desktop-control-plane:/k8s_image.tar
