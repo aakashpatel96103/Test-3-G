@@ -16,6 +16,7 @@ pipeline {
         stage('Clean Existing Backend') {
             steps {
                 bat '''
+                    taskkill /F /IM kubectl.exe 2>nul || exit /b 0
                     kubectl delete deployment %APP_NAME% -n %NAMESPACE% --ignore-not-found=true --wait=true
                     kubectl delete service %APP_NAME% -n %NAMESPACE% --ignore-not-found=true
                     kubectl delete pod -l app=%APP_NAME% -n %NAMESPACE% --ignore-not-found=true --wait=true
@@ -38,7 +39,16 @@ pipeline {
         }
 
         stage('Clean Docker Image') {
-            steps { bat 'docker rmi -f %IMAGE% 2>nul || exit /b 0' }
+            steps {
+                bat '''
+                    docker rmi -f %IMAGE% 2>nul || exit /b 0
+                    docker inspect desktop-control-plane >nul 2>&1
+                    if not errorlevel 1 (
+                        docker exec desktop-control-plane ctr -n k8s.io images rm docker.io/library/%IMAGE% >nul 2>&1
+                    )
+                    exit /b 0
+                '''
+            }
         }
 
         stage('Install Dependencies') {
@@ -91,10 +101,20 @@ pipeline {
         stage('Load Image Into Kubernetes') {
             steps {
                 bat '''
-                    for /f "delims=" %%C in ('kubectl config current-context') do (
-                        echo Kubernetes context: %%C
-                        if /I "%%C"=="minikube" minikube image load %IMAGE%
-                        if /I "%%C"=="kind-kind" kind load docker-image %IMAGE%
+                    for /f "delims=" %%C in ('kubectl config current-context') do set K8S_CONTEXT=%%C
+                    echo Kubernetes context: %K8S_CONTEXT%
+                    if /I "%K8S_CONTEXT%"=="minikube" minikube image load %IMAGE%
+                    if /I "%K8S_CONTEXT%"=="kind-kind" kind load docker-image %IMAGE%
+                    docker inspect desktop-control-plane >nul 2>&1
+                    if not errorlevel 1 (
+                        if not /I "%K8S_CONTEXT%"=="minikube" (
+                            echo Loading %IMAGE% into desktop-control-plane...
+                            docker save -o k8s_image.tar %IMAGE%
+                            docker cp k8s_image.tar desktop-control-plane:/k8s_image.tar
+                            docker exec desktop-control-plane ctr -n k8s.io images import /k8s_image.tar
+                            docker exec desktop-control-plane rm -f /k8s_image.tar
+                            del /f /q k8s_image.tar
+                        )
                     )
                     docker image inspect %IMAGE% >nul
                     if errorlevel 1 exit /b 1

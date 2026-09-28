@@ -16,7 +16,7 @@ spec:
       containers:
         - name: employee-backend
           image: employee-backend:2.0.0
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
           readinessProbe:
