@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = 'employee-backend'
+        APP_NAME = 'employee-service'
         NAMESPACE = 'employee-system'
-        IMAGE = 'employee-backend:latest'
+        IMAGE = 'employee-service:latest'
         MONITORING_NAMESPACE = 'monitoring'
     }
 
@@ -17,7 +17,7 @@ pipeline {
             steps {
                 script {
                     def randTag = bat(returnStdout: true, script: '@python -c "import secrets; print(secrets.token_hex(4))"').trim()
-                    env.IMAGE_TAG = "v${env.BUILD_NUMBER ?: '1'}-${randTag}"
+                    env.IMAGE_TAG = "v2.0.0-${env.BUILD_NUMBER ?: '1'}-${randTag}"
                     env.IMAGE = "${env.APP_NAME}:${env.IMAGE_TAG}"
                     echo "=================================================="
                     echo "Target Image: ${env.IMAGE}"
@@ -26,7 +26,7 @@ pipeline {
             }
         }
 
-        stage('Clean Existing Backend') {
+        stage('Clean Existing Service') {
             steps {
                 bat '''
                     taskkill /F /IM kubectl.exe 2>nul || exit /b 0
@@ -66,13 +66,13 @@ pipeline {
         }
 
         stage('Install Dependencies') {
-            steps { bat 'python -m pip install -r backend/requirements.txt' }
+            steps { bat 'python -m pip install -r employee-service/requirements.txt' }
         }
 
         stage('Run Tests') {
             steps {
                 bat '''
-                    cd backend
+                    cd employee-service
                     python -m pytest tests -v
                 '''
             }
@@ -85,7 +85,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 bat '''
-                    docker build --no-cache -t %IMAGE% backend
+                    docker build --no-cache -t %IMAGE% employee-service
                     docker tag %IMAGE% %APP_NAME%:latest
                     docker image inspect %IMAGE% >nul
                     if errorlevel 1 exit /b 1
@@ -136,18 +136,18 @@ pipeline {
             }
         }
 
-        stage('Deploy Backend') {
+        stage('Deploy Employee Service') {
             steps {
                 bat '''
-                    python -c "content = open('kubernetes/backend-deployment.yaml').read(); import re; open('kubernetes/backend-deployment.yaml', 'w').write(re.sub(r'image:.*', 'image: ' + '%IMAGE%', content))"
-                    kubectl apply -f kubernetes/backend-deployment.yaml
-                    kubectl apply -f kubernetes/backend-service.yaml
+                    python -c "content = open('kubernetes/employee-service-deployment.yaml').read(); import re; open('kubernetes/employee-service-deployment.yaml', 'w').write(re.sub(r'image:.*', 'image: ' + '%IMAGE%', content))"
+                    kubectl apply -f kubernetes/employee-service-deployment.yaml
+                    kubectl apply -f kubernetes/employee-service.yaml
                     kubectl rollout status deployment/%APP_NAME% -n %NAMESPACE% --timeout=180s
                 '''
             }
         }
 
-        stage('Verify Backend') {
+        stage('Verify Employee Service') {
             steps {
                 bat '''
                     kubectl get deployment %APP_NAME% -n %NAMESPACE% -o wide
@@ -208,7 +208,7 @@ pipeline {
             steps {
                 bat '''
                     set JENKINS_NODE_COOKIE=dontKillMe
-                    start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/employee-backend 8001:8000 -n employee-system > backend-port-forward.log 2>&1"
+                    start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/employee-service 8001:8000 -n employee-system > employee-service-port-forward.log 2>&1"
                     start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/grafana 8002:3000 -n monitoring > grafana-port-forward.log 2>&1"
                     powershell -NoProfile -Command "Start-Sleep -Seconds 5"
                 '''

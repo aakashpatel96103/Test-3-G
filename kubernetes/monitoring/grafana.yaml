@@ -114,14 +114,14 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "up{job=\"employee-backend\"}",
+              "expr": "up{job=~\"employee-service|employee-backend\"}",
               "instant": true,
-              "legendFormat": "Backend Status",
+              "legendFormat": "Service Status",
               "range": false,
               "refId": "A"
             }
           ],
-          "title": "Backend Service Status",
+          "title": "Employee Service Status",
           "type": "stat"
         },
         {
@@ -157,7 +157,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}) or vector(0)",
+              "expr": "sum(http_requests_total{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}) or vector(0)",
               "instant": true,
               "legendFormat": "Total User Requests",
               "range": false,
@@ -204,7 +204,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "(((sum(rate(http_request_duration_seconds_sum{job=\"employee-backend\", handler!~\"/health|/metrics\"}[5m])) / sum(rate(http_request_duration_seconds_count{job=\"employee-backend\", handler!~\"/health|/metrics\"}[5m]))) * 1000) > 0) or (sum(http_request_duration_seconds_sum{job=\"employee-backend\", handler!~\"/health|/metrics\"}) / sum(http_request_duration_seconds_count{job=\"employee-backend\", handler!~\"/health|/metrics\"}) * 1000) or vector(0)",
+              "expr": "(((sum(rate(http_request_duration_seconds_sum{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}[5m])) / sum(rate(http_request_duration_seconds_count{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}[5m]))) * 1000) > 0) or (sum(http_request_duration_seconds_sum{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}) / sum(http_request_duration_seconds_count{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}) * 1000) or vector(0)",
               "instant": true,
               "legendFormat": "Avg Latency",
               "range": false,
@@ -248,7 +248,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "process_resident_memory_bytes{job=\"employee-backend\"}",
+              "expr": "process_resident_memory_bytes{job=~\"employee-service|employee-backend\"}",
               "instant": true,
               "legendFormat": "Memory",
               "range": false,
@@ -298,7 +298,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum(rate(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m])) or vector(0)",
+              "expr": "sum(rate(http_requests_total{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}[1m])) or vector(0)",
               "legendFormat": "Request Rate (QPS)",
               "range": true,
               "refId": "A"
@@ -340,7 +340,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (handler) (rate(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
+              "expr": "sum by (handler) (rate(http_requests_total{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
               "legendFormat": "{{handler}}",
               "range": true,
               "refId": "A"
@@ -378,7 +378,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (status) (http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"})",
+              "expr": "sum by (status) (http_requests_total{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"})",
               "instant": true,
               "legendFormat": "Status {{status}}",
               "range": false,
@@ -421,7 +421,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (handler) (rate(http_request_duration_seconds_sum{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m])) / sum by (handler) (rate(http_request_duration_seconds_count{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
+              "expr": "sum by (handler) (rate(http_request_duration_seconds_sum{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}[1m])) / sum by (handler) (rate(http_request_duration_seconds_count{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
               "legendFormat": "{{handler}}",
               "range": true,
               "refId": "A"
@@ -463,7 +463,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "rate(process_cpu_seconds_total{job=\"employee-backend\"}[1m]) * 100",
+              "expr": "rate(process_cpu_seconds_total{job=~\"employee-service|employee-backend\"}[1m]) * 100",
               "legendFormat": "CPU Usage (%)",
               "range": true,
               "refId": "A"
@@ -522,7 +522,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (handler, method, status) (http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"})",
+              "expr": "sum by (handler, method, status) (http_requests_total{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"})",
               "format": "table",
               "instant": true,
               "range": false,
@@ -565,7 +565,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (handler, method) (rate(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
+              "expr": "sum by (handler, method) (rate(http_requests_total{job=~\"employee-service|employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
               "legendFormat": "{{method}} {{handler}}",
               "range": true,
               "refId": "A"
@@ -606,7 +606,7 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "sum(http_requests_total{job=\"employee-backend\", handler=\"/health\"}) or vector(0)",
+                  "expr": "sum(http_requests_total{job=~\"employee-service|employee-backend\", handler=\"/health\"}) or vector(0)",
                   "instant": true,
                   "legendFormat": "Health Probes",
                   "range": false,
@@ -643,7 +643,7 @@ data:
                 {
                   "datasource": { "type": "prometheus", "uid": "prometheus" },
                   "editorMode": "code",
-                  "expr": "sum(http_requests_total{job=\"employee-backend\", handler=\"/metrics\"}) or vector(0)",
+                  "expr": "sum(http_requests_total{job=~\"employee-service|employee-backend\", handler=\"/metrics\"}) or vector(0)",
                   "instant": true,
                   "legendFormat": "Scrape Requests",
                   "range": false,

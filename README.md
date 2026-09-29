@@ -6,8 +6,8 @@ A cloud-native, containerized RESTful API for Employee Management built with Fas
 
 ## Architecture Overview
 
-- **Backend Application**: FastAPI REST API exposing employee management endpoints and Prometheus metrics (`/metrics`).
-- **Containerization**: Docker lightweight Python base image with dynamic semantic and build-tagged versioning.
+- **Employee Service**: FastAPI REST API exposing employee management endpoints and Prometheus metrics (`/metrics`).
+- **Containerization**: Docker lightweight Python base image tagged with semantic versions (`employee-service:v2.0.0-<build>-<hash>`).
 - **Orchestration**: Kubernetes cluster running the application in the `employee-system` namespace with liveness and readiness health checks.
 - **Monitoring & Observability**:
   - **Prometheus** (deployed in `monitoring` namespace) continuously scrapes API telemetry every 15s.
@@ -20,7 +20,7 @@ A cloud-native, containerized RESTful API for Employee Management built with Fas
 
 ```text
 employee-management-system-jenkins-grafana/
-├── backend/                                # FastAPI backend root directory
+├── employee-service/                       # FastAPI microservice root directory
 │   ├── app/                                # Application package
 │   │   ├── __init__.py                     # Application package marker
 │   │   └── main.py                         # REST API endpoints & Prometheus instrumentation
@@ -31,8 +31,8 @@ employee-management-system-jenkins-grafana/
 │   └── requirements.txt                    # Python application dependencies
 ├── kubernetes/                             # Kubernetes orchestration manifests
 │   ├── namespace.yaml                      # Application namespace (employee-system)
-│   ├── backend-deployment.yaml             # Deployment configuration with health probes
-│   ├── backend-service.yaml                # ClusterIP service definition
+│   ├── employee-service-deployment.yaml    # Deployment configuration with health probes
+│   ├── employee-service.yaml               # ClusterIP service definition
 │   └── monitoring/                         # Observability stack manifests
 │       ├── namespace.yaml                  # Monitoring namespace
 │       ├── prometheus.yaml                 # Prometheus deployment, ConfigMap & service
@@ -40,7 +40,7 @@ employee-management-system-jenkins-grafana/
 ├── .gitignore                              # Git exclusion patterns
 ├── Jenkinsfile                             # Declarative Jenkins CI/CD pipeline
 ├── README.md                               # Project documentation & operations guide
-└── VERSION                                 # Semantic application version
+└── VERSION                                 # Semantic application version (2.0.0)
 ```
 
 ---
@@ -67,17 +67,17 @@ employee-management-system-jenkins-grafana/
 The Jenkins pipeline ([Jenkinsfile](./Jenkinsfile)) executes the following stages:
 
 1. **Checkout**: Pulls the latest source code from SCM.
-2. **Generate Image Tag**: Generates a unique build version tag (`v${BUILD_NUMBER}-${HASH}`).
+2. **Generate Image Tag**: Generates a versioned build tag (`v2.0.0-${BUILD_NUMBER}-${HASH}`).
 3. **Clean Existing Resources**: Cleans up previous deployments, services, and pods.
 4. **Install Dependencies**: Installs Python requirements.
 5. **Run Tests**: Executes unit test suite using `pytest`.
 6. **Dependency Validation**: Validates dependencies via `pip check`.
-7. **Build Docker Image**: Builds the Docker container image without cache and tags it.
+7. **Build Docker Image**: Builds the Docker container image without cache and tags it (`employee-service`).
 8. **Verify Docker Image**: Validates image runtime, routes, and Prometheus libraries.
 9. **Prepare Kubernetes**: Configures namespaces (`employee-system` and `monitoring`).
 10. **Load Image Into Kubernetes**: Loads the container image into the local cluster node.
-11. **Deploy Backend**: Deploys the FastAPI service with rolling update verification.
-12. **Verify Backend**: Validates pod status, connectivity, and route configuration.
+11. **Deploy Employee Service**: Deploys the service with rolling update verification.
+12. **Verify Employee Service**: Validates pod status, connectivity, and route configuration.
 13. **Health & Metrics Checks**: Verifies `/health` and `/metrics` response statuses.
 14. **Deploy Prometheus & Grafana**: Deploys Prometheus and Grafana with automated provisioning.
 15. **Monitoring Validation**: Verifies readiness of monitoring services.
