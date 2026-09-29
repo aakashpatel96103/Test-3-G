@@ -69,7 +69,7 @@ data:
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
           "id": 100,
-          "title": "Application Overview",
+          "title": "Application Overview (Real User Traffic)",
           "type": "row"
         },
         {
@@ -157,14 +157,14 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum(http_requests_total{job=\"employee-backend\"})",
+              "expr": "sum(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}) or vector(0)",
               "instant": true,
-              "legendFormat": "Total Requests",
+              "legendFormat": "Total User Requests",
               "range": false,
               "refId": "A"
             }
           ],
-          "title": "Total HTTP Requests",
+          "title": "Total User Requests (Excl. Probes)",
           "type": "stat"
         },
         {
@@ -203,14 +203,14 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "(sum(rate(http_request_duration_seconds_sum{job=\"employee-backend\"}[1m])) / sum(rate(http_request_duration_seconds_count{job=\"employee-backend\"}[1m]))) * 1000",
+              "expr": "((sum(rate(http_request_duration_seconds_sum{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m])) / sum(rate(http_request_duration_seconds_count{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m]))) * 1000) or vector(0)",
               "instant": true,
               "legendFormat": "Avg Latency",
               "range": false,
               "refId": "A"
             }
           ],
-          "title": "Avg Request Duration",
+          "title": "Avg User Request Duration",
           "type": "stat"
         },
         {
@@ -261,7 +261,7 @@ data:
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
           "id": 101,
-          "title": "HTTP Request Traffic",
+          "title": "Real User Traffic (0 req/s When Idle)",
           "type": "row"
         },
         {
@@ -297,13 +297,13 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum(rate(http_requests_total{job=\"employee-backend\"}[1m]))",
-              "legendFormat": "Overall QPS",
+              "expr": "sum(rate(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m])) or vector(0)",
+              "legendFormat": "User QPS",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "Overall Request Rate (QPS)",
+          "title": "User Request Rate (0 req/s When Idle)",
           "type": "timeseries"
         },
         {
@@ -339,13 +339,13 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (handler) (rate(http_requests_total{job=\"employee-backend\"}[1m]))",
+              "expr": "sum by (handler) (rate(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
               "legendFormat": "{{handler}}",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "Requests by Endpoint (Handler)",
+          "title": "User Requests by Endpoint (Excl. Probes)",
           "type": "timeseries"
         },
         {
@@ -377,14 +377,14 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (status) (http_requests_total{job=\"employee-backend\"})",
+              "expr": "sum by (status) (http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"})",
               "instant": true,
               "legendFormat": "Status {{status}}",
               "range": false,
               "refId": "A"
             }
           ],
-          "title": "HTTP Status Codes Breakdown",
+          "title": "User HTTP Status Codes",
           "type": "piechart"
         },
         {
@@ -420,13 +420,13 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (handler) (rate(http_request_duration_seconds_sum{job=\"employee-backend\"}[1m])) / sum by (handler) (rate(http_request_duration_seconds_count{job=\"employee-backend\"}[1m]))",
+              "expr": "sum by (handler) (rate(http_request_duration_seconds_sum{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m])) / sum by (handler) (rate(http_request_duration_seconds_count{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
               "legendFormat": "{{handler}}",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "Average Duration by Endpoint",
+          "title": "Average Duration by User Endpoint",
           "type": "timeseries"
         },
         {
@@ -475,7 +475,7 @@ data:
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
           "id": 103,
-          "title": "FastAPI Swagger (/docs) & Endpoints Breakdown",
+          "title": "FastAPI Swagger (/docs) & Real Endpoints Breakdown",
           "type": "row"
         },
         {
@@ -521,7 +521,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (handler, method, status) (http_requests_total{job=\"employee-backend\"})",
+              "expr": "sum by (handler, method, status) (http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"})",
               "format": "table",
               "instant": true,
               "range": false,
@@ -564,7 +564,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (handler, method) (rate(http_requests_total{job=\"employee-backend\", handler=~\"/employees.*|/docs.*|/health.*\"}[1m]))",
+              "expr": "sum by (handler, method) (rate(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m]))",
               "legendFormat": "{{method}} {{handler}}",
               "range": true,
               "refId": "A"
@@ -572,6 +572,89 @@ data:
           ],
           "title": "Live Swagger Execution Traffic",
           "type": "timeseries"
+        },
+        {
+          "collapsed": true,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+          "id": 104,
+          "panels": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": {
+                "defaults": {
+                  "color": { "mode": "palette-classic" },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [{ "color": "orange", "value": null }]
+                  }
+                },
+                "overrides": []
+              },
+              "gridPos": { "h": 4, "w": 12, "x": 0, "y": 34 },
+              "id": 12,
+              "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+                "textMode": "auto"
+              },
+              "targets": [
+                {
+                  "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "editorMode": "code",
+                  "expr": "sum(http_requests_total{job=\"employee-backend\", handler=\"/health\"}) or vector(0)",
+                  "instant": true,
+                  "legendFormat": "K8s Health Probes",
+                  "range": false,
+                  "refId": "A"
+                }
+              ],
+              "title": "Kubernetes Liveness / Readiness Probes (/health)",
+              "type": "stat"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": {
+                "defaults": {
+                  "color": { "mode": "palette-classic" },
+                  "mappings": [],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [{ "color": "purple", "value": null }]
+                  }
+                },
+                "overrides": []
+              },
+              "gridPos": { "h": 4, "w": 12, "x": 12, "y": 34 },
+              "id": 13,
+              "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+                "textMode": "auto"
+              },
+              "targets": [
+                {
+                  "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "editorMode": "code",
+                  "expr": "sum(http_requests_total{job=\"employee-backend\", handler=\"/metrics\"}) or vector(0)",
+                  "instant": true,
+                  "legendFormat": "Prometheus Scrapes",
+                  "range": false,
+                  "refId": "A"
+                }
+              ],
+              "title": "Prometheus Internal Scrapes (/metrics)",
+              "type": "stat"
+            }
+          ],
+          "title": "System Background Activity (Kubelet & Prometheus Health Probes)",
+          "type": "row"
         }
       ],
       "refresh": "5s",
