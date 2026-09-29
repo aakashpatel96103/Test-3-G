@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.tar
+.image_tag

@@ -4,13 +4,26 @@ pipeline {
     environment {
         APP_NAME = 'employee-backend'
         NAMESPACE = 'employee-system'
-        IMAGE = 'employee-backend:2.0.0'
+        IMAGE = 'employee-backend:latest'
         MONITORING_NAMESPACE = 'monitoring'
     }
 
     stages {
         stage('Checkout') {
             steps { checkout scm }
+        }
+
+        stage('Generate Random Image Tag') {
+            steps {
+                script {
+                    def randTag = bat(returnStdout: true, script: '@python -c "import secrets; print(secrets.token_hex(4))"').trim()
+                    env.IMAGE_TAG = "v${env.BUILD_NUMBER ?: '1'}-${randTag}"
+                    env.IMAGE = "${env.APP_NAME}:${env.IMAGE_TAG}"
+                    echo "=================================================="
+                    echo "Generated Random Image Name: ${env.IMAGE}"
+                    echo "=================================================="
+                }
+            }
         }
 
         stage('Clean Existing Backend') {
@@ -73,6 +86,7 @@ pipeline {
             steps {
                 bat '''
                     docker build --no-cache -t %IMAGE% backend
+                    docker tag %IMAGE% %APP_NAME%:latest
                     docker image inspect %IMAGE% >nul
                     if errorlevel 1 exit /b 1
                 '''
@@ -126,6 +140,7 @@ pipeline {
         stage('Deploy Backend') {
             steps {
                 bat '''
+                    python -c "content = open('kubernetes/backend-deployment.yaml').read(); import re; open('kubernetes/backend-deployment.yaml', 'w').write(re.sub(r'image:.*', 'image: ' + '%IMAGE%', content))"
                     kubectl apply -f kubernetes/backend-deployment.yaml
                     kubectl apply -f kubernetes/backend-service.yaml
                     kubectl rollout status deployment/%APP_NAME% -n %NAMESPACE% --timeout=180s
@@ -136,7 +151,7 @@ pipeline {
         stage('Verify Backend') {
             steps {
                 bat '''
-                    kubectl get deployment %APP_NAME% -n %NAMESPACE%
+                    kubectl get deployment %APP_NAME% -n %NAMESPACE% -o wide
                     kubectl get pods -n %NAMESPACE% -o wide
                     kubectl get service %APP_NAME% -n %NAMESPACE%
                     kubectl exec deployment/%APP_NAME% -n %NAMESPACE% -- python --version
