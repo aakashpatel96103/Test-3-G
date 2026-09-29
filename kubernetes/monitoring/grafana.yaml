@@ -666,7 +666,7 @@ data:
       "time": { "from": "now-15m", "to": "now" },
       "timepicker": {},
       "timezone": "browser",
-      "title": "Employee Management System - Monitoring",
+      "title": "Employee Management System - Observability Dashboard",
       "uid": "employee-system-dashboard",
       "version": 1,
       "weekStart": ""

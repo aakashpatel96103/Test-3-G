@@ -108,7 +108,6 @@ pipeline {
                 bat '''
                     kubectl apply -f kubernetes/namespace.yaml
                     kubectl apply -f kubernetes/monitoring/namespace.yaml
-                    if exist kubernetes/configmap.yaml kubectl apply -f kubernetes/configmap.yaml
                 '''
             }
         }
@@ -209,7 +208,7 @@ pipeline {
             steps {
                 bat '''
                     set JENKINS_NODE_COOKIE=dontKillMe
-                    start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/employee-backend 8001:8000 -n employee-system > swagger-port-forward.log 2>&1"
+                    start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/employee-backend 8001:8000 -n employee-system > backend-port-forward.log 2>&1"
                     start "" /B cmd /c "set JENKINS_NODE_COOKIE=dontKillMe&& kubectl port-forward service/grafana 8002:3000 -n monitoring > grafana-port-forward.log 2>&1"
                     powershell -NoProfile -Command "Start-Sleep -Seconds 5"
                 '''
@@ -218,7 +217,7 @@ pipeline {
     }
 
     post {
-        success { echo 'BUILD SUCCESS' }
-        failure { echo 'BUILD FAILED' }
+        success { echo 'PIPELINE EXECUTION SUCCESSFUL' }
+        failure { echo 'PIPELINE EXECUTION FAILED' }
     }
 }
