@@ -13,14 +13,14 @@ pipeline {
             steps { checkout scm }
         }
 
-        stage('Generate Random Image Tag') {
+        stage('Generate Image Tag') {
             steps {
                 script {
                     def randTag = bat(returnStdout: true, script: '@python -c "import secrets; print(secrets.token_hex(4))"').trim()
                     env.IMAGE_TAG = "v${env.BUILD_NUMBER ?: '1'}-${randTag}"
                     env.IMAGE = "${env.APP_NAME}:${env.IMAGE_TAG}"
                     echo "=================================================="
-                    echo "Generated Random Image Name: ${env.IMAGE}"
+                    echo "Target Image: ${env.IMAGE}"
                     echo "=================================================="
                 }
             }

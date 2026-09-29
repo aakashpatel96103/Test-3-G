@@ -69,7 +69,7 @@ data:
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
           "id": 100,
-          "title": "Application Overview (Real User Traffic)",
+          "title": "Application Overview",
           "type": "row"
         },
         {
@@ -164,7 +164,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Total User Requests (Excl. Probes)",
+          "title": "Total User Requests",
           "type": "stat"
         },
         {
@@ -211,7 +211,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Avg User Request Duration",
+          "title": "Average Request Latency",
           "type": "stat"
         },
         {
@@ -262,7 +262,7 @@ data:
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
           "id": 101,
-          "title": "Real User Traffic (0 req/s When Idle)",
+          "title": "Traffic & Throughput Analysis",
           "type": "row"
         },
         {
@@ -299,12 +299,12 @@ data:
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
               "expr": "sum(rate(http_requests_total{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m])) or vector(0)",
-              "legendFormat": "User QPS",
+              "legendFormat": "Request Rate (QPS)",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "User Request Rate (0 req/s When Idle)",
+          "title": "Request Throughput",
           "type": "timeseries"
         },
         {
@@ -346,14 +346,14 @@ data:
               "refId": "A"
             }
           ],
-          "title": "User Requests by Endpoint (Excl. Probes)",
+          "title": "Requests by Endpoint",
           "type": "timeseries"
         },
         {
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
           "id": 102,
-          "title": "Response Status & System Resources",
+          "title": "HTTP Status & Resource Utilization",
           "type": "row"
         },
         {
@@ -385,7 +385,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "User HTTP Status Codes",
+          "title": "HTTP Status Code Distribution",
           "type": "piechart"
         },
         {
@@ -427,7 +427,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Average Duration by User Endpoint",
+          "title": "Latency by Endpoint",
           "type": "timeseries"
         },
         {
@@ -469,14 +469,14 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Process CPU Usage",
+          "title": "CPU Utilization",
           "type": "timeseries"
         },
         {
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
           "id": 103,
-          "title": "FastAPI Swagger (/docs) & Real Endpoints Breakdown",
+          "title": "API Endpoint Metrics & Analytics",
           "type": "row"
         },
         {
@@ -494,7 +494,7 @@ data:
             "overrides": [
               {
                 "matcher": { "id": "byName", "options": "handler" },
-                "properties": [{ "id": "displayName", "value": "Endpoint (from /docs)" }]
+                "properties": [{ "id": "displayName", "value": "API Endpoint" }]
               },
               {
                 "matcher": { "id": "byName", "options": "method" },
@@ -529,7 +529,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Swagger (/docs) Endpoints Execution Table",
+          "title": "Endpoint Activity Summary",
           "type": "table"
         },
         {
@@ -571,7 +571,7 @@ data:
               "refId": "A"
             }
           ],
-          "title": "Live Swagger Execution Traffic",
+          "title": "Live Endpoint Traffic",
           "type": "timeseries"
         },
         {
@@ -608,12 +608,12 @@ data:
                   "editorMode": "code",
                   "expr": "sum(http_requests_total{job=\"employee-backend\", handler=\"/health\"}) or vector(0)",
                   "instant": true,
-                  "legendFormat": "K8s Health Probes",
+                  "legendFormat": "Health Probes",
                   "range": false,
                   "refId": "A"
                 }
               ],
-              "title": "Kubernetes Liveness / Readiness Probes (/health)",
+              "title": "Liveness & Readiness Probes",
               "type": "stat"
             },
             {
@@ -645,16 +645,16 @@ data:
                   "editorMode": "code",
                   "expr": "sum(http_requests_total{job=\"employee-backend\", handler=\"/metrics\"}) or vector(0)",
                   "instant": true,
-                  "legendFormat": "Prometheus Scrapes",
+                  "legendFormat": "Scrape Requests",
                   "range": false,
                   "refId": "A"
                 }
               ],
-              "title": "Prometheus Internal Scrapes (/metrics)",
+              "title": "Prometheus Metric Scrapes",
               "type": "stat"
             }
           ],
-          "title": "System Background Activity (Kubelet & Prometheus Health Probes)",
+          "title": "System Probes & Background Telemetry",
           "type": "row"
         }
       ],
