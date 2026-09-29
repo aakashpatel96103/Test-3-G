@@ -32,6 +32,7 @@ pipeline {
                     kubectl delete deployment grafana -n %MONITORING_NAMESPACE% --ignore-not-found=true --wait=true
                     kubectl delete service prometheus -n %MONITORING_NAMESPACE% --ignore-not-found=true
                     kubectl delete service grafana -n %MONITORING_NAMESPACE% --ignore-not-found=true
+                    kubectl delete configmap grafana-datasource grafana-dashboard-provider grafana-dashboard-employee -n %MONITORING_NAMESPACE% --ignore-not-found=true
                     kubectl delete pod -l app=prometheus -n %MONITORING_NAMESPACE% --ignore-not-found=true --wait=true
                     kubectl delete pod -l app=grafana -n %MONITORING_NAMESPACE% --ignore-not-found=true --wait=true
                 '''
