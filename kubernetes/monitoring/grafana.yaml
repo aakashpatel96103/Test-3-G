@@ -173,6 +173,7 @@ data:
             "defaults": {
               "color": { "mode": "thresholds" },
               "mappings": [],
+              "noValue": "0",
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -203,7 +204,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "((sum(rate(http_request_duration_seconds_sum{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m])) / sum(rate(http_request_duration_seconds_count{job=\"employee-backend\", handler!~\"/health|/metrics\"}[1m]))) * 1000) or vector(0)",
+              "expr": "(((sum(rate(http_request_duration_seconds_sum{job=\"employee-backend\", handler!~\"/health|/metrics\"}[5m])) / sum(rate(http_request_duration_seconds_count{job=\"employee-backend\", handler!~\"/health|/metrics\"}[5m]))) * 1000) > 0) or (sum(http_request_duration_seconds_sum{job=\"employee-backend\", handler!~\"/health|/metrics\"}) / sum(http_request_duration_seconds_count{job=\"employee-backend\", handler!~\"/health|/metrics\"}) * 1000) or vector(0)",
               "instant": true,
               "legendFormat": "Avg Latency",
               "range": false,
