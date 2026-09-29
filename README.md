@@ -16,6 +16,35 @@ A cloud-native, containerized RESTful API for Employee Management built with Fas
 
 ---
 
+## Project File Structure
+
+```text
+employee-management-system-jenkins-grafana/
+├── backend/                                # FastAPI backend root directory
+│   ├── app/                                # Application package
+│   │   ├── __init__.py                     # Application package marker
+│   │   └── main.py                         # REST API endpoints & Prometheus instrumentation
+│   ├── tests/                              # Automated test suite
+│   │   ├── __init__.py                     # Test suite package marker
+│   │   └── test_main.py                    # Unit & integration test cases
+│   ├── Dockerfile                          # Container image build specification
+│   └── requirements.txt                    # Python application dependencies
+├── kubernetes/                             # Kubernetes orchestration manifests
+│   ├── namespace.yaml                      # Application namespace (employee-system)
+│   ├── backend-deployment.yaml             # Deployment configuration with health probes
+│   ├── backend-service.yaml                # ClusterIP service definition
+│   └── monitoring/                         # Observability stack manifests
+│       ├── namespace.yaml                  # Monitoring namespace
+│       ├── prometheus.yaml                 # Prometheus deployment, ConfigMap & service
+│       └── grafana.yaml                    # Grafana deployment, datasource & provisioned dashboard
+├── .gitignore                              # Git exclusion patterns
+├── Jenkinsfile                             # Declarative Jenkins CI/CD pipeline
+├── README.md                               # Project documentation & operations guide
+└── VERSION                                 # Semantic application version
+```
+
+---
+
 ## API Endpoints
 
 | Method | Endpoint | Description |
